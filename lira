@@ -1,6 +1,4 @@
-#!/usr/bin/env lua
-
-local vars = {}
+#!/usr/bin/env luajit
 
 function trim(s)
     return s:match("^%s*(.-)%s*$")
@@ -55,7 +53,7 @@ function eval(expr)
         expr = expr:gsub("%+","..")
     end
 
-    local f, err = load("return " .. expr)
+    local f, err = load("return "..expr, "expr", "t", {})
 
     if not f then
         print("Invalid expression: "..expr)
@@ -123,8 +121,14 @@ function run(code)
                 i = i + 1
             end
 
+            if not lines[i] then
+                error("missing end")
+            end
+
+            local blockcode = table.concat(block,"\n")
+
             while eval(cond) do
-                local result = run(table.concat(block,"\n"))
+                local result = run(blockcode)
 
                 if result == "break" then
                     break
