@@ -1,0 +1,190 @@
+#!/usr/bin/env lua
+
+local vars = {}
+
+function trim(s)
+    return s:match("^%s*(.-)%s*$")
+end
+
+function eval(expr)
+
+    if expr:match('^".*"$') then
+        return expr:sub(2,-2)
+    end
+
+    expr = expr:gsub("(%a+)%((.-)%)", function(name,arg)
+
+        if funcs[name] then
+
+            local f = funcs[name]
+
+            local old = vars[f.arg]
+
+            vars[f.arg] = eval(arg)
+
+            local result = run(f.code)
+
+            vars[f.arg] = old
+
+            if result and result.type == "return" then
+                return result.value
+            end
+
+            return ""
+        end
+
+        return name.."("..arg..")"
+    end)
+
+    expr = expr:gsub("%a+", function(v)
+
+        if vars[v] ~= nil then
+
+            if type(vars[v]) == "string" then
+                return '"' .. vars[v] .. '"'
+            else
+                return vars[v]
+            end
+
+        end
+
+        return v
+    end)
+
+    if expr:find('"') then
+        expr = expr:gsub("%+","..")
+    end
+
+    local f, err = load("return " .. expr)
+
+    if not f then
+        print("Invalid expression: "..expr)
+        return nil
+    end
+
+    local ok, result = pcall(f)
+
+    if not ok then
+        print("Runtime error: "..result)
+        return nil
+    end
+
+    return result
+end
+
+vars = {}
+funcs = {}
+
+function run(code)
+
+    local lines = {}
+    for l in code:gmatch("[^\r\n]+") do
+        table.insert(lines, trim(l))
+    end
+
+    local i = 1
+
+    while i <= #lines do
+        local line = lines[i]
+
+        line = line:gsub("@.*","")
+        line = trim(line)
+
+        if line == "" then
+            i = i + 1
+            goto continue
+        end
+
+        local fname,arg = line:match("^set (%a+)%((%a+)%)")
+        if fname then
+
+            local block = {}
+            i = i + 1
+
+            while lines[i] and trim(lines[i]) ~= "end" do
+                table.insert(block, lines[i])
+                i = i + 1
+            end
+
+            funcs[fname] = {
+                arg = arg,
+                code = table.concat(block,"\n")
+            }
+
+        elseif line:match("^while ") then
+
+            local cond = line:match("^while (.+)")
+            local block = {}
+
+            i = i + 1
+
+            while lines[i] and trim(lines[i]) ~= "end" do
+                table.insert(block, lines[i])
+                i = i + 1
+            end
+
+            while eval(cond) do
+                local result = run(table.concat(block,"\n"))
+
+                if result == "break" then
+                    break
+                end
+            end
+
+        elseif line == "break" then
+            return "break"
+
+        elseif line:match("^return ") then
+            local expr = line:sub(8)
+            return { type="return", value=eval(expr) }
+        
+        elseif line:match("^input ") then
+            local var = line:match("^input (%a+)")
+            vars[var] = io.read()
+
+        elseif line:match("^let ") then
+            local name,value = line:match("^let (%a+) = (.+)")
+            vars[name] = eval(value)
+
+        elseif line:sub(1,6) == "print " then
+            local expr = line:sub(7)
+            print(eval(expr))
+
+        else
+            local call,arg = line:match("^(%a+)%((.+)%)")
+
+            if call and funcs[call] then
+
+                local f = funcs[call]
+
+                local old = vars[f.arg]
+
+                vars[f.arg] = eval(arg)
+
+                local result = run(f.code)
+
+                vars[f.arg] = old
+
+                if result and result.type == "return" then
+                    return result
+                end
+            end
+        end
+
+        i = i + 1
+        ::continue::
+    end
+end
+
+local filename = arg[1]
+local file = io.open(filename,"r")
+
+if not file then
+    print("file not found")
+    os.exit(1)
+end
+
+local code = file:read("*all")
+file:close()
+
+run(code)

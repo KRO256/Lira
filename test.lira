@@ -1,0 +1,77 @@
+@最初の文字列
+print "Hello"
+print "My Language"
+
+@変数テスト
+let name = "Lua"
+print name
+
+let x = 10
+let y = 5
+
+print x @やりますねぇ
+print y
+print 2+3*4
+print x+y
+
+@whileテスト
+let x = 0
+
+while x < 3
+print x
+let x = x + 1
+end
+
+@文字列連結
+let name = "Lua"
+
+print "Hello " + name
+print name + " language"
+
+@inputテスト
+print "What is your name?"
+
+input name
+
+print "Hello " + name
+
+@setテスト
+set hello()
+
+print "Hello world"
+
+end
+
+hello()
+
+@set引数テスト
+set hello(name)
+
+print "Hello " + name
+
+end
+
+hello("Lua")
+hello("World")
+
+@breakテスト
+let x = 1
+
+while x <= 10
+
+print x
+
+break
+
+let x = x + 1
+
+end
+
+@returnテスト
+set add(x)
+
+return x + 10
+
+end
+
+print add(5)
