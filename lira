@@ -6,6 +6,9 @@ end
 
 function eval(expr)
 
+    expr = expr:gsub("%f[%a]True%f[%A]", "true")
+    expr = expr:gsub("%f[%a]False%f[%A]", "false")
+
     if expr:match('^".*"$') then
         return expr:sub(2,-2)
     end
