@@ -184,14 +184,32 @@ function run(code)
 end
 
 local filename = arg[1]
+
+if not filename then
+    io.stderr:write("Error: no input file\n")
+    os.exit(1)
+end
+
 local file = io.open(filename,"r")
 
 if not file then
-    print("file not found")
+    io.stderr:write("Error: file not found: "..filename.."\n")
     os.exit(1)
 end
 
 local code = file:read("*all")
 file:close()
 
-run(code)
+local ok, err = pcall(function()
+    run(code)
+end)
+
+if not ok then
+    if tostring(err):match("interrupted") then
+        io.stderr:write("\nExecution stopped (Ctrl+C)\n")
+        os.exit(130)
+    else
+        io.stderr:write("Runtime error: "..tostring(err).."\n")
+        os.exit(1)
+    end
+end 
